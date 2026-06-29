@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+package-lock.json.bak
+
+# Muhit (maxfiy) sozlamalari
+.env
+.env.local
+.env.*.local
+
+# Loglar
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# Vaqtinchalik / build fayllar
+dist/
+build/
+.cache/
+tmp/
+_smoke*.js
+
+# OS fayllari
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Muharrir (editor) sozlamalari
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# MongoDB lokal ma'lumotlari (agar loyiha ichida bo'lsa)
+data/
+*.mongodb

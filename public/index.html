@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="uz">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🍑 Shaftoli bog'i — Hisob-kitob</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">🍑 <span>Shaftoli bog'i</span></div>
+        <nav id="nav">
+          <a href="#/" data-route="/"><span class="ic">🏠</span> Bosh sahifa</a>
+          <a href="#/kirim-chiqim" data-route="/kirim-chiqim"><span class="ic">💰</span> Kirim / Chiqim</a>
+          <a href="#/shaftoli-kuni" data-route="/shaftoli-kuni"><span class="ic">🍑</span> Shaftoli kuni</a>
+          <a href="#/statistika" data-route="/statistika"><span class="ic">📊</span> Statistika</a>
+          <a href="#/sozlamalar" data-route="/sozlamalar"><span class="ic">⚙️</span> Sozlamalar</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <button class="menu-btn" id="menuBtn">☰</button>
+        <div id="view"></div>
+      </main>
+    </div>
+
+    <!-- Modal (umumiy) -->
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal" id="modal"></div>
+    </div>
+    <!-- Toast bildirishnomalari -->
+    <div id="toasts"></div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+  </body>
+</html>
