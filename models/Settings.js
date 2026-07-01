@@ -4,8 +4,8 @@ const mongoose = require('mongoose');
 const settingsSchema = new mongoose.Schema(
   {
     key: { type: String, default: 'main', unique: true },
-    // Har 10 yashik uchun tara (yashik vazni) - kg
-    taraKgPer10Crates: { type: Number, default: 20 },
+    // Har bir yashik uchun tara (yashik vazni) - kg. Topshirishda oldindan to'ldiriladi.
+    taraKgPerCrate: { type: Number, default: 2 },
     currency: { type: String, default: "so'm" },
   },
   { timestamps: true }

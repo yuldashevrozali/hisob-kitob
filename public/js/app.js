@@ -26,10 +26,11 @@ async function router() {
 
 window.addEventListener('hashchange', router);
 window.addEventListener('load', async () => {
-  // Sozlamalarni (valyuta) oldindan yuklab olamiz
+  // Sozlamalarni (valyuta, tara) oldindan yuklab olamiz
   try {
     const s = await api('/settings');
     App.currency = s.currency || "so'm";
+    App.taraPerCrate = s.taraKgPerCrate ?? 2;
   } catch (_) {}
   router();
 });
@@ -187,10 +188,12 @@ async function deleteTxn(id) {
 
 // ============ Shaftoli kuni ============
 async function renderShaftoliKuni() {
-  const [open, delivered] = await Promise.all([
+  const [open, delivered, settings] = await Promise.all([
     api('/peach-batches?status=open'),
     api('/peach-batches?status=delivered'),
+    api('/settings'),
   ]);
+  App.taraPerCrate = settings.taraKgPerCrate ?? 2;
 
   view.innerHTML = `
     <h1 class="page-title">🍑 Shaftoli kuni</h1>
@@ -272,6 +275,11 @@ function openDeliverModal(batch) {
         <input type="number" id="kgInput" min="0" step="any" placeholder="0" required />
       </div>
       <div class="field">
+        <label>Har bir yashik uchun tara (kg)</label>
+        <input type="number" id="taraPerCrate" min="0" step="any" value="${App.taraPerCrate}" required />
+        <div class="hint">Har bir to'lgan yashik uchun shu vazn brutto kg'dan ayriladi</div>
+      </div>
+      <div class="field">
         <label>1 kg nechpuldan? (${App.currency})</label>
         <input type="number" id="sellPrice" min="0" step="any" placeholder="0" required />
       </div>
@@ -280,7 +288,7 @@ function openDeliverModal(batch) {
         <div class="line"><span>To'lgan yashik:</span> <span id="cFilled">—</span></div>
         <div class="line"><span class="muted">Bo'sh qolgan:</span> <span class="muted" id="cEmpty">—</span></div>
         <div class="line"><span>Brutto vazn:</span> <span id="cGross">—</span></div>
-        <div class="line"><span class="muted">Tara (har 10 yashik):</span> <span class="amount-neg" id="cTara">—</span></div>
+        <div class="line"><span class="muted">Tara (<span id="cTaraInfo">—</span>):</span> <span class="amount-neg" id="cTara">—</span></div>
         <div class="line"><span>Sof vazn:</span> <span id="cNet">—</span></div>
         <div class="line total"><span>Sof foyda (sof kg × narx):</span> <span id="cProfit">—</span></div>
       </div>
@@ -295,6 +303,7 @@ function openDeliverModal(batch) {
   const kgInput = document.getElementById('kgInput');
   const sellPrice = document.getElementById('sellPrice');
   const crates = document.getElementById('deliveredCrates');
+  const taraInput = document.getElementById('taraPerCrate');
   const modeTotal = document.getElementById('modeTotal');
   const modePer10 = document.getElementById('modePer10');
 
@@ -332,13 +341,14 @@ function openDeliverModal(batch) {
     try {
       const calc = await api(`/peach-batches/${batch._id}/preview`, {
         method: 'POST',
-        body: { deliveredCrates: crates.value, kgMode: deliverKgMode, kgInput: kgInput.value, sellPricePerKg: sellPrice.value },
+        body: { deliveredCrates: crates.value, taraPerCrate: taraInput.value, kgMode: deliverKgMode, kgInput: kgInput.value, sellPricePerKg: sellPrice.value },
       });
       lastCalc = calc;
       document.getElementById('calcBox').style.display = 'block';
       document.getElementById('cFilled').textContent = fmt(calc.deliveredCrates) + ' ta';
       document.getElementById('cEmpty').textContent = fmt(calc.emptyCrates) + ' ta';
       document.getElementById('cGross').textContent = fmtKg(calc.grossKg);
+      document.getElementById('cTaraInfo').textContent = fmtKg(calc.taraPerCrate) + ' × ' + fmt(calc.deliveredCrates) + ' ta';
       document.getElementById('cTara').textContent = '− ' + fmtKg(calc.taraKg);
       document.getElementById('cNet').textContent = fmtKg(calc.netKg);
       const pEl = document.getElementById('cProfit');
@@ -352,6 +362,7 @@ function openDeliverModal(batch) {
 
   kgInput.oninput = preview;
   sellPrice.oninput = preview;
+  taraInput.oninput = preview;
 
   document.getElementById('deliverForm').onsubmit = async (e) => {
     e.preventDefault();
@@ -359,7 +370,7 @@ function openDeliverModal(batch) {
     try {
       await api(`/peach-batches/${batch._id}/deliver`, {
         method: 'POST',
-        body: { deliveredCrates: crates.value, kgMode: deliverKgMode, kgInput: kgInput.value, sellPricePerKg: sellPrice.value },
+        body: { deliveredCrates: crates.value, taraPerCrate: taraInput.value, kgMode: deliverKgMode, kgInput: kgInput.value, sellPricePerKg: sellPrice.value },
       });
       const p = lastCalc.netProfit;
       toast(`Topshirildi! ${p >= 0 ? 'Sof foyda' : 'Zarar'} ${money(Math.abs(p))} kirimga o'tdi`, 'ok');
@@ -554,9 +565,9 @@ async function renderSozlamalar() {
         <h2 style="margin-top:0;font-size:17px">Hisob-kitob parametrlari</h2>
         <form id="settingsForm" style="margin-top:14px">
           <div class="field">
-            <label>Tara — har 10 yashik uchun (kg)</label>
-            <input type="number" id="tara" min="0" step="any" value="${settings.taraKgPer10Crates}" />
-            <div class="hint">Topshirishda har 10 yashik uchun shu vazn brutto kg'dan ayriladi</div>
+            <label>Tara — har bir yashik uchun (kg)</label>
+            <input type="number" id="tara" min="0" step="any" value="${settings.taraKgPerCrate}" />
+            <div class="hint">Bu standart qiymat. Topshirishda har bir yashik uchun tara so'raladi va shu qiymat oldindan qo'yiladi (o'zgartirish mumkin).</div>
           </div>
           <div class="field">
             <label>Valyuta belgisi</label>
@@ -585,11 +596,12 @@ async function renderSozlamalar() {
       const s = await api('/settings', {
         method: 'PUT',
         body: {
-          taraKgPer10Crates: document.getElementById('tara').value,
+          taraKgPerCrate: document.getElementById('tara').value,
           currency: document.getElementById('currency').value,
         },
       });
       App.currency = s.currency;
+      App.taraPerCrate = s.taraKgPerCrate;
       toast('Saqlandi', 'ok');
       renderSozlamalar();
     } catch (err) {

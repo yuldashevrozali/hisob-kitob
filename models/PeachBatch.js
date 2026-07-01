@@ -12,6 +12,7 @@ const peachBatchSchema = new mongoose.Schema(
     delivery: {
       deliveredCrates: { type: Number, default: 0 }, // nechta yashik to'ldi (sotildi)
       emptyCrates: { type: Number, default: 0 }, // nechta yashik bo'sh qoldi (ma'lumot uchun)
+      taraPerCrate: { type: Number, default: 0 }, // har bir yashik uchun tara (kg)
       kgMode: { type: String, enum: ['per10', 'total'], default: 'total' },
       kgInput: { type: Number, default: 0 }, // foydalanuvchi kiritgan qiymat
       grossKg: { type: Number, default: 0 }, // tara olib tashlangunga qadar

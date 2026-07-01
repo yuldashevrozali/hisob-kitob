@@ -17,11 +17,11 @@ router.get('/', async (req, res, next) => {
 router.put('/', async (req, res, next) => {
   try {
     const s = await Settings.getSingleton();
-    if (req.body.taraKgPer10Crates !== undefined) {
-      const v = Number(req.body.taraKgPer10Crates);
+    if (req.body.taraKgPerCrate !== undefined) {
+      const v = Number(req.body.taraKgPerCrate);
       if (Number.isNaN(v) || v < 0)
         return res.status(400).json({ error: "Tara qiymatini to'g'ri kiriting" });
-      s.taraKgPer10Crates = v;
+      s.taraKgPerCrate = v;
     }
     if (req.body.currency !== undefined) s.currency = String(req.body.currency).trim() || "so'm";
     await s.save();

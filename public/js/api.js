@@ -1,6 +1,7 @@
 // API bilan ishlash va yordamchi funksiyalar
 const App = {
   currency: "so'm",
+  taraPerCrate: 2, // har bir yashik uchun standart tara (sozlamalardan yangilanadi)
 };
 
 async function api(path, options = {}) {

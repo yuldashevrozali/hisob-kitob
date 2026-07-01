@@ -8,9 +8,13 @@ const router = express.Router();
 // Topshirish hisob-kitobini bajaradigan yordamchi.
 // crateCount - olingan yashiklar soni, deliveredCrates - to'lgan (sotilgan) yashiklar.
 // Yashik bepul, xarajat yo'q. Hisob faqat to'lgan yashiklar bo'yicha boradi.
-async function computeDelivery({ crateCount, deliveredCrates, kgMode, kgInput, sellPricePerKg }) {
+async function computeDelivery({ crateCount, deliveredCrates, taraPerCrate, kgMode, kgInput, sellPricePerKg }) {
   const settings = await Settings.getSingleton();
-  const taraPer10 = settings.taraKgPer10Crates; // har 10 yashik uchun tara (kg)
+
+  // Har bir yashik uchun tara (topshirishda kiritiladi; kiritilmasa - sozlamadagi standart)
+  let taraKgPerCrate = Number(taraPerCrate);
+  if (Number.isNaN(taraKgPerCrate)) taraKgPerCrate = settings.taraKgPerCrate;
+  taraKgPerCrate = Math.max(0, taraKgPerCrate);
 
   // To'lgan yashiklar soni (kiritilmasa - hammasi to'lgan deb olamiz)
   let filled = Number(deliveredCrates);
@@ -32,8 +36,8 @@ async function computeDelivery({ crateCount, deliveredCrates, kgMode, kgInput, s
     grossKg = kg;
   }
 
-  // Tara: har 10 yashik uchun belgilangan vazn olib tashlanadi
-  const taraKg = taraPer10 * groupsOf10;
+  // Tara: har bir to'lgan yashik uchun belgilangan vazn olib tashlanadi
+  const taraKg = taraKgPerCrate * filled;
   const netKg = Math.max(0, grossKg - taraKg);
   const revenue = netKg * price;
   // Yashik bepul bo'lgani uchun sof foyda = to'liq tushum
@@ -42,6 +46,7 @@ async function computeDelivery({ crateCount, deliveredCrates, kgMode, kgInput, s
   return {
     deliveredCrates: filled,
     emptyCrates,
+    taraPerCrate: taraKgPerCrate,
     kgMode,
     kgInput: kg,
     grossKg,
@@ -50,7 +55,6 @@ async function computeDelivery({ crateCount, deliveredCrates, kgMode, kgInput, s
     sellPricePerKg: price,
     revenue,
     netProfit,
-    taraPer10,
     groupsOf10,
   };
 }
@@ -92,6 +96,7 @@ router.post('/:id/preview', async (req, res, next) => {
     const calc = await computeDelivery({
       crateCount: batch.crateCount,
       deliveredCrates: req.body.deliveredCrates,
+      taraPerCrate: req.body.taraPerCrate,
       kgMode: req.body.kgMode,
       kgInput: req.body.kgInput,
       sellPricePerKg: req.body.sellPricePerKg,
@@ -113,6 +118,7 @@ router.post('/:id/deliver', async (req, res, next) => {
     const calc = await computeDelivery({
       crateCount: batch.crateCount,
       deliveredCrates: req.body.deliveredCrates,
+      taraPerCrate: req.body.taraPerCrate,
       kgMode: req.body.kgMode,
       kgInput: req.body.kgInput,
       sellPricePerKg: req.body.sellPricePerKg,
@@ -122,6 +128,7 @@ router.post('/:id/deliver', async (req, res, next) => {
     batch.delivery = {
       deliveredCrates: calc.deliveredCrates,
       emptyCrates: calc.emptyCrates,
+      taraPerCrate: calc.taraPerCrate,
       kgMode: calc.kgMode,
       kgInput: calc.kgInput,
       grossKg: calc.grossKg,
