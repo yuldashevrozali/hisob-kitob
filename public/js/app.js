@@ -107,7 +107,7 @@ function showLogin(msg) {
     const passphrase = document.getElementById('passphrase').value;
     btn.disabled = true;
     try {
-      const res = await api('/auth/login', { method: 'POST', body: { passphrase } });
+      const res = await api('/auth/login', { method: 'POST', body: { passphrase, deviceId: deviceId() } });
       localStorage.setItem('token', res.token);
       toast('Xush kelibsiz!', 'ok');
       startApp();

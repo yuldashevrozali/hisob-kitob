@@ -7,6 +7,17 @@ function authToken() {
   return localStorage.getItem('token') || '';
 }
 
+// Qurilma uchun barqaror ID (bir marta yaratiladi, saqlanadi).
+// Shu qurilmadan qayta kirish yangi sessiya yaratmaydi.
+function deviceId() {
+  let id = localStorage.getItem('deviceId');
+  if (!id) {
+    id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(16).slice(2);
+    localStorage.setItem('deviceId', id);
+  }
+  return id;
+}
+
 async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   const t = authToken();
