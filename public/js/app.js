@@ -25,103 +25,17 @@ async function router() {
 }
 
 window.addEventListener('hashchange', router);
-window.addEventListener('load', init);
-document.getElementById('menuBtn').addEventListener('click', () => {
-  document.querySelector('.sidebar').classList.toggle('open');
-});
-
-// ============ Auth (login) ============
-async function init() {
-  const ok = await ensureAuth();
-  if (ok) startApp();
-  else showLogin();
-}
-
-async function ensureAuth() {
-  if (!authToken()) return false;
-  try {
-    await api('/auth/me');
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
-// Token eskirganini oldindan sezish uchun davriy tekshiruv (24 soat)
-let authPing = null;
-
-async function startApp() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appRoot').style.display = 'flex';
+window.addEventListener('load', async () => {
+  // Sozlamalarni (valyuta) oldindan yuklab olamiz
   try {
     const s = await api('/settings');
     App.currency = s.currency || "so'm";
   } catch (_) {}
-  // Har 3 daqiqada token amal qilishini tekshiramiz (24 soat tugasa - logout)
-  if (authPing) clearInterval(authPing);
-  authPing = setInterval(async () => {
-    try {
-      await api('/auth/me');
-    } catch (_) {}
-  }, 3 * 60 * 1000);
   router();
-}
-
-async function logout() {
-  try {
-    await api('/auth/logout', { method: 'POST' });
-  } catch (_) {}
-  localStorage.removeItem('token');
-  showLogin();
-}
-
-function showLogin(msg) {
-  if (authPing) {
-    clearInterval(authPing);
-    authPing = null;
-  }
-  document.getElementById('appRoot').style.display = 'none';
-  const screen = document.getElementById('loginScreen');
-  screen.style.display = 'flex';
-
-  screen.innerHTML = `
-    <div class="login-card">
-      <div class="logo">🍑</div>
-      <h2>Shaftoli bog'i</h2>
-      <p class="sub">Kirish uchun kalit so'zni kiriting</p>
-      ${msg ? `<div class="login-alert">${esc(msg)}</div>` : ''}
-      <form id="loginForm">
-        <div class="field">
-          <label>Kalit so'z</label>
-          <input type="password" id="passphrase" placeholder="••••••••" autocomplete="off" required autofocus />
-        </div>
-        <button type="submit" class="btn btn-primary btn-block" id="loginBtn">Kirish</button>
-      </form>
-      <p class="hint" style="margin-top:16px">Bir vaqtda faqat 2 ta qurilma kira oladi. Sessiya 24 soatdan keyin tugaydi.</p>
-    </div>
-  `;
-
-  document.getElementById('loginForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('loginBtn');
-    const passphrase = document.getElementById('passphrase').value;
-    btn.disabled = true;
-    try {
-      const res = await api('/auth/login', { method: 'POST', body: { passphrase, deviceId: deviceId() } });
-      localStorage.setItem('token', res.token);
-      toast('Xush kelibsiz!', 'ok');
-      startApp();
-    } catch (err) {
-      // 3-qurilma limiti: hamma chiqarildi
-      if (err.data && err.data.allLoggedOut) {
-        showLogin(err.message);
-        return;
-      }
-      toast(err.message, 'err');
-      btn.disabled = false;
-    }
-  };
-}
+});
+document.getElementById('menuBtn').addEventListener('click', () => {
+  document.querySelector('.sidebar').classList.toggle('open');
+});
 
 // ============ Bosh sahifa ============
 async function renderHome() {
@@ -614,15 +528,11 @@ function chartOpts() {
 
 // ============ Sozlamalar ============
 async function renderSozlamalar() {
-  const [cats, settings, sessions] = await Promise.all([
-    api('/categories'),
-    api('/settings'),
-    api('/auth/sessions'),
-  ]);
+  const [cats, settings] = await Promise.all([api('/categories'), api('/settings')]);
 
   view.innerHTML = `
     <h1 class="page-title">⚙️ Sozlamalar</h1>
-    <p class="page-sub">Kategoriyalar, hisob-kitob va kirish (login) sozlamalari</p>
+    <p class="page-sub">Kategoriyalar va hisob-kitob parametrlari</p>
 
     <div class="grid grid-2">
       <div class="card">
@@ -656,57 +566,7 @@ async function renderSozlamalar() {
         </form>
       </div>
     </div>
-
-    <div class="section-head"><h2>🔐 Kirish (login) sozlamalari</h2></div>
-    <div class="grid grid-2">
-      <div class="card">
-        <h2 style="margin-top:0;font-size:17px">📱 Qurilmalar va sessiya</h2>
-        <div class="summary-box" style="margin-top:14px">
-          <div class="line"><span>Faol qurilmalar:</span> <span><b>${sessions.devices}</b> / ${sessions.max}</span></div>
-          <div class="line"><span class="muted">Sessiya muddati:</span> <span class="muted">24 soat</span></div>
-        </div>
-        <p class="hint">Bir vaqtda faqat <b>${sessions.max} ta qurilma</b> kira oladi. 3-qurilma kirmoqchi bo'lsa — <b>barcha qurilmalar avtomatik chiqariladi</b>. Har bir sessiya 24 soatdan keyin tugaydi.</p>
-        <button class="btn btn-red btn-block" id="logoutAllBtn" style="margin-top:6px">🚪 Barcha qurilmalardan chiqish</button>
-      </div>
-
-      <div class="card">
-        <h2 style="margin-top:0;font-size:17px">Kalit so'z</h2>
-        <form id="passForm" style="margin-top:14px">
-          <div class="field">
-            <label>Yangi kalit so'z</label>
-            <input type="text" id="newPass" placeholder="Yangi kalit so'zni kiriting" />
-            <div class="hint">Login qilishda shu so'z so'raladi. Hozirgi standart: <b>300million</b> (o'zgartirsangiz yangisi amal qiladi)</div>
-          </div>
-          <button type="submit" class="btn btn-primary btn-block">Kalit so'zni yangilash</button>
-        </form>
-      </div>
-    </div>
   `;
-
-  document.getElementById('logoutAllBtn').onclick = async () => {
-    if (!confirm('Barcha qurilmalar tizimdan chiqariladi. Davom etasizmi?')) return;
-    try {
-      await api('/auth/logout-all', { method: 'POST' });
-      localStorage.removeItem('token');
-      toast('Barcha qurilmalar chiqarildi', 'ok');
-      showLogin();
-    } catch (err) {
-      toast(err.message, 'err');
-    }
-  };
-
-  document.getElementById('passForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const np = document.getElementById('newPass').value.trim();
-    if (!np) return;
-    try {
-      await api('/auth/passphrase', { method: 'PUT', body: { passphrase: np } });
-      toast('Kalit so\'z yangilandi', 'ok');
-      document.getElementById('newPass').value = '';
-    } catch (err) {
-      toast(err.message, 'err');
-    }
-  };
 
   document.getElementById('catForm').onsubmit = async (e) => {
     e.preventDefault();

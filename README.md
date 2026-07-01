@@ -3,15 +3,6 @@
 Shaftoli bog'i uchun kirim-chiqim, shaftoli kuni (yashik olish/topshirish) va statistika web-sayti.
 Texnologiyalar: **Node.js + Express + MongoDB (Mongoose)** + vanilla JS frontend.
 
-## Kirish (login)
-
-- Saytga faqat **kalit so'z** bilan kiriladi. Standart: **`300million`**.
-- **Sessiya 24 soat** amal qiladi — keyin avtomatik logout bo'ladi (qaytadan kirish kerak).
-- Bir vaqtda faqat **2 ta qurilma** kira oladi. **3-qurilma** kirmoqchi bo'lsa — **barcha qurilmalar avtomatik tizimdan chiqariladi** (xavfsizlik chorasi), keyin hamma qaytadan kiradi.
-- **Sozlamalar → Kirish sozlamalari** bo'limida: faol qurilmalar soni ko'rinadi, kalit so'zni o'zgartirish va "Barcha qurilmalardan chiqish" tugmasi bor.
-
-> ℹ️ Sessiyalar serverning xotirasida saqlanadi — server qayta ishga tushsa, hamma qaytadan login qiladi.
-
 ## Bo'limlar
 
 - **Bosh sahifa** — umumiy balans, so'nggi yozuvlar, ochiq partiyalar.

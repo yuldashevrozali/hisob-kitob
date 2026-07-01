@@ -3,41 +3,16 @@ const App = {
   currency: "so'm",
 };
 
-function authToken() {
-  return localStorage.getItem('token') || '';
-}
-
-// Qurilma uchun barqaror ID (bir marta yaratiladi, saqlanadi).
-// Shu qurilmadan qayta kirish yangi sessiya yaratmaydi.
-function deviceId() {
-  let id = localStorage.getItem('deviceId');
-  if (!id) {
-    id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(16).slice(2);
-    localStorage.setItem('deviceId', id);
-  }
-  return id;
-}
-
 async function api(path, options = {}) {
-  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  const t = authToken();
-  if (t) headers.Authorization = 'Bearer ' + t;
-
   const res = await fetch('/api' + path, {
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     ...options,
-    headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   let data = null;
   try {
     data = await res.json();
   } catch (_) {}
-
-  // Token eskirgan / yo'q bo'lsa - login oynasiga qaytaramiz
-  if (res.status === 401 && !path.startsWith('/auth/login') && !path.startsWith('/auth/status')) {
-    localStorage.removeItem('token');
-    if (typeof showLogin === 'function') showLogin();
-  }
   if (!res.ok) {
     const err = new Error((data && data.error) || 'Server xatosi');
     err.data = data;
