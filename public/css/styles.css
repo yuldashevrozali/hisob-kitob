@@ -190,6 +190,51 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .toast.err { border-left-color: var(--red); }
 @keyframes slidein { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+/* Login oynasi */
+.login-screen {
+  position: fixed; inset: 0;
+  background: radial-gradient(1200px 600px at 50% -10%, #221a12, #0f1115);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; padding: 20px;
+}
+.login-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 34px;
+  width: 100%; max-width: 420px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.login-card .logo { font-size: 46px; }
+.login-card h2 { margin: 8px 0 4px; font-size: 22px; }
+.login-card p.sub { color: var(--muted); margin: 0 0 22px; font-size: 14px; }
+.login-card .field { text-align: left; }
+.login-card input { text-align: center; font-size: 18px; letter-spacing: 0.04em; }
+
+/* Kamera (skaner) */
+.cam-wrap {
+  position: relative;
+  width: 220px; height: 220px;
+  margin: 6px auto 14px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--accent);
+  background: #000;
+  box-shadow: 0 0 0 6px rgba(255, 138, 61, 0.12);
+}
+.cam-wrap video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.cam-wrap.scanning { animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 6px rgba(255,138,61,0.12); } 50% { box-shadow: 0 0 0 12px rgba(255,138,61,0.05); } }
+.scan-status { font-size: 13px; color: var(--muted); min-height: 18px; margin-bottom: 12px; }
+
+.person-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.person-row { display: flex; align-items: center; justify-content: space-between; background: var(--panel-2); border: 1px solid var(--border); padding: 10px 14px; border-radius: 10px; }
+.person-row .who { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+
+/* Sidebar pastki qism (logout) */
+.sidebar-foot { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+
 /* Responsive */
 @media (max-width: 820px) {
   .sidebar { position: fixed; left: -260px; z-index: 40; transition: left 0.2s; }

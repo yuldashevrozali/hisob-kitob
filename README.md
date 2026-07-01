@@ -3,6 +3,15 @@
 Shaftoli bog'i uchun kirim-chiqim, shaftoli kuni (yashik olish/topshirish) va statistika web-sayti.
 Texnologiyalar: **Node.js + Express + MongoDB (Mongoose)** + vanilla JS frontend.
 
+## Kirish (login)
+
+- Boshida saytga **kalit so'z** bilan kiriladi. Standart kalit so'z: **`300million`**.
+- **Sozlamalar → Kirish sozlamalari** bo'limida **"✋ Kirish qo'shish"** tugmasi bilan kamera orqali **qo'l** skaner qilinadi (maksimal **2 ta odam**).
+- Odam qo'shilgandan keyin login: **kalit so'z + qo'l skaneri** (qo'shilgan odamlardan biri tanilishi kerak).
+- Kalit so'zni xohlagancha o'zgartirish mumkin.
+
+> ⚠️ **Eslatma:** qo'l skaneri brauzerda **MediaPipe HandLandmarker** orqali ishlaydi — kamera ruxsati va internet kerak (model CDN'dan yuklanadi). Bu apparatli biometrika emas, qo'l geometriyasiga asoslangan taxminiy taniqlash. Odam qo'shilgandan so'ng login majburiy qo'l skanerini talab qiladi — shuning uchun avval faqat kalit so'z bilan kirib, kamera ishlashiga ishonch hosil qilgach odam qo'shing.
+
 ## Bo'limlar
 
 - **Bosh sahifa** — umumiy balans, so'nggi yozuvlar, ochiq partiyalar.

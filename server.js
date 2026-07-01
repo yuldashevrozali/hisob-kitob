@@ -11,12 +11,16 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shafto
 app.use(cors());
 app.use(express.json());
 
-// API yo'nalishlari
-app.use('/api/categories', require('./routes/categories'));
-app.use('/api/transactions', require('./routes/transactions'));
-app.use('/api/peach-batches', require('./routes/peachBatches'));
-app.use('/api/settings', require('./routes/settings'));
-app.use('/api/stats', require('./routes/stats'));
+// Auth (login) — ochiq yo'nalishlar shu yerda
+const { router: authRouter, authRequired } = require('./routes/auth');
+app.use('/api/auth', authRouter);
+
+// Qolgan barcha API yo'nalishlari faqat login qilingandan keyin ishlaydi
+app.use('/api/categories', authRequired, require('./routes/categories'));
+app.use('/api/transactions', authRequired, require('./routes/transactions'));
+app.use('/api/peach-batches', authRequired, require('./routes/peachBatches'));
+app.use('/api/settings', authRequired, require('./routes/settings'));
+app.use('/api/stats', authRequired, require('./routes/stats'));
 
 // Frontend (statik fayllar)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -31,6 +35,12 @@ async function start() {
   try {
     await mongoose.connect(MONGODB_URI);
     console.log('✅ MongoDB ulandi:', MONGODB_URI);
+
+    // Eski yuz skaneri ma'lumotlarini tozalaymiz (endi qo'l skaneri ishlatiladi)
+    try {
+      const res = await mongoose.connection.collection('auths').updateMany({}, { $unset: { faces: '' } });
+      if (res.modifiedCount) console.log('🧹 Eski yuz skaneri tozalandi:', res.modifiedCount);
+    } catch (_) {}
     app.listen(PORT, () => {
       console.log(`🍑 Server ishlayapti: http://localhost:${PORT}`);
     });

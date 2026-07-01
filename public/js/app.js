@@ -25,17 +25,123 @@ async function router() {
 }
 
 window.addEventListener('hashchange', router);
-window.addEventListener('load', async () => {
-  // Sozlamalarni (valyuta) oldindan yuklab olamiz
+window.addEventListener('load', init);
+document.getElementById('menuBtn').addEventListener('click', () => {
+  document.querySelector('.sidebar').classList.toggle('open');
+});
+
+// ============ Auth (login) ============
+async function init() {
+  const ok = await ensureAuth();
+  if (ok) startApp();
+  else showLogin();
+}
+
+async function ensureAuth() {
+  if (!authToken()) return false;
+  try {
+    await api('/auth/me');
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function startApp() {
+  handStopCamera();
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'flex';
   try {
     const s = await api('/settings');
     App.currency = s.currency || "so'm";
   } catch (_) {}
   router();
-});
-document.getElementById('menuBtn').addEventListener('click', () => {
-  document.querySelector('.sidebar').classList.toggle('open');
-});
+}
+
+async function logout() {
+  try {
+    await api('/auth/logout', { method: 'POST' });
+  } catch (_) {}
+  localStorage.removeItem('token');
+  showLogin();
+}
+
+async function showLogin() {
+  handStopCamera();
+  document.getElementById('appRoot').style.display = 'none';
+  const screen = document.getElementById('loginScreen');
+  screen.style.display = 'flex';
+
+  let status = { handsCount: 0 };
+  try {
+    status = await api('/auth/status');
+  } catch (_) {}
+  const needHand = status.handsCount > 0;
+
+  screen.innerHTML = `
+    <div class="login-card">
+      <div class="logo">🍑</div>
+      <h2>Shaftoli bog'i</h2>
+      <p class="sub">${needHand ? "Kalit so'z + qo'l skaneri orqali kiring" : "Kirish uchun kalit so'zni kiriting"}</p>
+      <form id="loginForm">
+        <div class="field">
+          <label>Kalit so'z</label>
+          <input type="password" id="passphrase" placeholder="••••••••" autocomplete="off" required autofocus />
+        </div>
+        ${
+          needHand
+            ? `<div class="cam-wrap" id="loginCam"><video id="loginVideo" muted playsinline></video></div>
+               <div class="scan-status" id="loginStatus">Kamera yoqilmoqda...</div>`
+            : ''
+        }
+        <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
+          ${needHand ? "✋ Skaner qilib kirish" : 'Kirish'}
+        </button>
+      </form>
+    </div>
+  `;
+
+  if (needHand) {
+    const video = document.getElementById('loginVideo');
+    try {
+      await handStartCamera(video);
+      await handLoadModels();
+      document.getElementById('loginStatus').textContent = "Tayyor — qo'lingizni doira ichiga oching";
+    } catch (e) {
+      document.getElementById('loginStatus').textContent = 'Kamera xatosi: ' + e.message;
+    }
+  }
+
+  document.getElementById('loginForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    const passphrase = document.getElementById('passphrase').value;
+    btn.disabled = true;
+    try {
+      let body = { passphrase };
+      if (needHand) {
+        const st = document.getElementById('loginStatus');
+        st.textContent = 'Skaner qilinmoqda...';
+        document.getElementById('loginCam').classList.add('scanning');
+        const descriptor = await handCaptureDescriptor(document.getElementById('loginVideo'));
+        document.getElementById('loginCam').classList.remove('scanning');
+        body.descriptor = descriptor;
+      }
+      const res = await api('/auth/login', { method: 'POST', body });
+      localStorage.setItem('token', res.token);
+      toast(res.who ? `Xush kelibsiz, ${res.who}!` : 'Xush kelibsiz!', 'ok');
+      startApp();
+    } catch (err) {
+      const st = document.getElementById('loginStatus');
+      if (st) {
+        st.textContent = err.message;
+        document.getElementById('loginCam').classList.remove('scanning');
+      }
+      toast(err.message, 'err');
+      btn.disabled = false;
+    }
+  };
+}
 
 // ============ Bosh sahifa ============
 async function renderHome() {
@@ -528,11 +634,15 @@ function chartOpts() {
 
 // ============ Sozlamalar ============
 async function renderSozlamalar() {
-  const [cats, settings] = await Promise.all([api('/categories'), api('/settings')]);
+  const [cats, settings, hands] = await Promise.all([
+    api('/categories'),
+    api('/settings'),
+    api('/auth/hands'),
+  ]);
 
   view.innerHTML = `
     <h1 class="page-title">⚙️ Sozlamalar</h1>
-    <p class="page-sub">Kategoriyalar va hisob-kitob parametrlari</p>
+    <p class="page-sub">Kategoriyalar, hisob-kitob va kirish (login) sozlamalari</p>
 
     <div class="grid grid-2">
       <div class="card">
@@ -566,7 +676,62 @@ async function renderSozlamalar() {
         </form>
       </div>
     </div>
+
+    <div class="section-head"><h2>🔐 Kirish (login) sozlamalari</h2></div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h2 style="margin-top:0;font-size:17px">✋ Qo'l skaneri</h2>
+        <p class="hint" style="margin-top:0">Maksimal 2 ta odam qo'shiladi. Odam qo'shilgach login: kalit so'z + qo'l skaneri orqali (qo'shilgan odamlardan biri).</p>
+        <div class="person-list">
+          ${
+            hands.length
+              ? hands
+                  .map(
+                    (h) => `<div class="person-row">
+                      <span class="who"><span style="font-size:20px">✋</span> ${esc(h.label)}</span>
+                      <button class="btn btn-red btn-sm" onclick="deleteHand('${h._id}')">O'chirish</button>
+                    </div>`
+                  )
+                  .join('')
+              : '<div class="empty">Hali hech kim qo\'shilmagan — login faqat kalit so\'z bilan</div>'
+          }
+        </div>
+        ${
+          hands.length < 2
+            ? `<button class="btn btn-primary btn-block" id="enrollBtn" style="margin-top:14px">＋ ✋ Kirish qo'shish (qo'l skaneri)</button>`
+            : '<div class="hint" style="margin-top:14px">✅ 2 ta odam qo\'shildi (limit to\'ldi)</div>'
+        }
+      </div>
+
+      <div class="card">
+        <h2 style="margin-top:0;font-size:17px">Kalit so'z</h2>
+        <form id="passForm" style="margin-top:14px">
+          <div class="field">
+            <label>Yangi kalit so'z</label>
+            <input type="text" id="newPass" placeholder="Yangi kalit so'zni kiriting" />
+            <div class="hint">Login qilishda shu so'z so'raladi. Hozirgi: <b>300million</b> (o'zgartirsangiz yangisi amal qiladi)</div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Kalit so'zni yangilash</button>
+        </form>
+      </div>
+    </div>
   `;
+
+  const enrollBtn = document.getElementById('enrollBtn');
+  if (enrollBtn) enrollBtn.onclick = openEnrollModal;
+
+  document.getElementById('passForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const np = document.getElementById('newPass').value.trim();
+    if (!np) return;
+    try {
+      await api('/auth/passphrase', { method: 'PUT', body: { passphrase: np } });
+      toast('Kalit so\'z yangilandi', 'ok');
+      document.getElementById('newPass').value = '';
+    } catch (err) {
+      toast(err.message, 'err');
+    }
+  };
 
   document.getElementById('catForm').onsubmit = async (e) => {
     e.preventDefault();
@@ -602,6 +767,65 @@ async function deleteCategory(id) {
   if (!confirm('Kategoriyani o\'chirasizmi?')) return;
   try {
     await api('/categories/' + id, { method: 'DELETE' });
+    toast('O\'chirildi', 'ok');
+    renderSozlamalar();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+// Qo'l skaneri orqali yangi odam qo'shish
+function openEnrollModal() {
+  openModal(`
+    <h3>✋ Kirish qo'shish — qo'l skaneri</h3>
+    <div class="cam-wrap" id="enrollCam"><video id="enrollVideo" muted playsinline></video></div>
+    <div class="scan-status" id="enrollStatus">Kamera yoqilmoqda...</div>
+    <div class="field">
+      <label>Ism (ixtiyoriy)</label>
+      <input type="text" id="enrollName" placeholder="Masalan: Ali" />
+    </div>
+    <div class="row" style="margin-top:6px">
+      <button type="button" class="btn btn-ghost" onclick="closeModal()">Bekor qilish</button>
+      <button type="button" class="btn btn-primary" id="enrollSaveBtn">📸 Skaner qilib saqlash</button>
+    </div>
+  `);
+
+  const video = document.getElementById('enrollVideo');
+  const status = document.getElementById('enrollStatus');
+
+  (async () => {
+    try {
+      await handStartCamera(video);
+      status.textContent = 'Model yuklanmoqda...';
+      await handLoadModels();
+      status.textContent = "Tayyor — qo'lingizni doira ichiga ochiq tuting";
+    } catch (e) {
+      status.textContent = 'Kamera/skaner xatosi: ' + e.message;
+    }
+  })();
+
+  document.getElementById('enrollSaveBtn').onclick = async () => {
+    try {
+      status.textContent = 'Skaner qilinmoqda...';
+      document.getElementById('enrollCam').classList.add('scanning');
+      const descriptor = await handCaptureDescriptor(video);
+      const label = document.getElementById('enrollName').value;
+      await api('/auth/hands', { method: 'POST', body: { descriptor, label } });
+      toast('Odam qo\'shildi — endi login qo\'l skanerini talab qiladi', 'ok');
+      closeModal();
+      renderSozlamalar();
+    } catch (err) {
+      document.getElementById('enrollCam').classList.remove('scanning');
+      status.textContent = err.message;
+      toast(err.message, 'err');
+    }
+  };
+}
+
+async function deleteHand(id) {
+  if (!confirm('Bu odamni kirishdan o\'chirasizmi?')) return;
+  try {
+    await api('/auth/hands/' + id, { method: 'DELETE' });
     toast('O\'chirildi', 'ok');
     renderSozlamalar();
   } catch (e) {

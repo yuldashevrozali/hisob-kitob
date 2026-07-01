@@ -3,18 +3,35 @@ const App = {
   currency: "so'm",
 };
 
+function authToken() {
+  return localStorage.getItem('token') || '';
+}
+
 async function api(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  const t = authToken();
+  if (t) headers.Authorization = 'Bearer ' + t;
+
   const res = await fetch('/api' + path, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   let data = null;
   try {
     data = await res.json();
   } catch (_) {}
+
+  // Token eskirgan / yo'q bo'lsa - login oynasiga qaytaramiz
+  if (res.status === 401 && !path.startsWith('/auth/login') && !path.startsWith('/auth/status')) {
+    localStorage.removeItem('token');
+    if (typeof showLogin === 'function') showLogin();
+  }
   if (!res.ok) {
-    throw new Error((data && data.error) || 'Server xatosi');
+    const err = new Error((data && data.error) || 'Server xatosi');
+    err.data = data;
+    err.status = res.status;
+    throw err;
   }
   return data;
 }
@@ -52,6 +69,8 @@ function openModal(html) {
 }
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
+  // Modal ichida kamera ochilgan bo'lsa - o'chiramiz
+  if (typeof handStopCamera === 'function') handStopCamera();
 }
 document.getElementById('modalOverlay').addEventListener('click', (e) => {
   if (e.target.id === 'modalOverlay') closeModal();
