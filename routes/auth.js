@@ -4,79 +4,64 @@ const Auth = require('../models/Auth');
 
 const router = express.Router();
 
-// Faol tokenlar (xotirada). Server qayta ishga tushsa - qayta login kerak.
-const tokens = new Map();
+// Faol sessiyalar (qurilmalar): token -> { createdAt }
+// Xotirada saqlanadi. Server qayta ishga tushsa - qayta login kerak.
+const sessions = new Map();
 
-// Ikki qo'l vektori orasidagi masofa (qancha kichik - shuncha o'xshash)
-function distance(a, b) {
-  let s = 0;
-  for (let i = 0; i < a.length; i++) {
-    const d = a[i] - b[i];
-    s += d * d;
+const TOKEN_TTL = 24 * 60 * 60 * 1000; // 24 soat
+const MAX_DEVICES = 2; // bir vaqtda faqat 2 qurilma
+
+// 24 soatdan oshgan (eskirgan) sessiyalarni tozalash
+function pruneExpired() {
+  const now = Date.now();
+  for (const [token, s] of sessions) {
+    if (now - s.createdAt > TOKEN_TTL) sessions.delete(token);
   }
-  return Math.sqrt(s);
-}
-const MATCH_THRESHOLD = 0.9; // bundan kichik bo'lsa - bir xil qo'l
-
-function validDescriptor(d) {
-  return Array.isArray(d) && d.length === 63 && d.every((x) => typeof x === 'number');
 }
 
 // Himoyalangan yo'nalishlar uchun middleware
 function authRequired(req, res, next) {
+  pruneExpired();
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-  if (!token || !tokens.has(token)) {
+  const s = sessions.get(token);
+  if (!token || !s) {
     return res.status(401).json({ error: 'Avtorizatsiya talab qilinadi' });
+  }
+  if (Date.now() - s.createdAt > TOKEN_TTL) {
+    sessions.delete(token);
+    return res.status(401).json({ error: '24 soat tugadi — qaytadan kiring' });
   }
   next();
 }
 
 // --- OCHIQ yo'nalishlar ---
 
-// Login holati: nechta odam (qo'l) qo'shilgan
-router.get('/status', async (req, res, next) => {
-  try {
-    const auth = await Auth.getSingleton();
-    res.json({ handsCount: auth.hands.length });
-  } catch (e) {
-    next(e);
-  }
-});
-
-// Login
+// Login (faqat kalit so'z)
 router.post('/login', async (req, res, next) => {
   try {
+    pruneExpired();
     const auth = await Auth.getSingleton();
-    const { passphrase, descriptor } = req.body;
+    const { passphrase } = req.body;
 
-    // 1) Kalit so'z tekshiruvi
+    // Kalit so'z tekshiruvi
     if ((passphrase || '') !== auth.passphrase) {
       return res.status(401).json({ error: "Kalit so'z noto'g'ri" });
     }
 
-    // 2) Agar odam(lar) qo'shilgan bo'lsa - qo'l skaneri majburiy
-    let who = null;
-    if (auth.hands.length > 0) {
-      if (!validDescriptor(descriptor)) {
-        return res.status(401).json({ error: "Qo'l skaneri talab qilinadi", needHand: true });
-      }
-      let best = Infinity;
-      for (const h of auth.hands) {
-        const d = distance(descriptor, h.descriptor);
-        if (d < best) {
-          best = d;
-          who = h.label;
-        }
-      }
-      if (best > MATCH_THRESHOLD) {
-        return res.status(401).json({ error: "Qo'l tanilmadi. Qaytadan urinib ko'ring", needHand: true });
-      }
+    // Qurilmalar limiti: allaqachon 2 ta qurilma kirgan bo'lsa,
+    // 3-qurilma urinishi barcha sessiyalarni bekor qiladi (hamma chiqadi).
+    if (sessions.size >= MAX_DEVICES) {
+      sessions.clear();
+      return res.status(403).json({
+        error: "3-qurilma aniqlandi! Barcha qurilmalar tizimdan chiqarildi. Qaytadan kiring.",
+        allLoggedOut: true,
+      });
     }
 
     const token = crypto.randomBytes(24).toString('hex');
-    tokens.set(token, Date.now());
-    res.json({ token, who });
+    sessions.set(token, { createdAt: Date.now() });
+    res.json({ token, expiresIn: TOKEN_TTL, devices: sessions.size });
   } catch (e) {
     next(e);
   }
@@ -86,55 +71,25 @@ router.post('/login', async (req, res, next) => {
 
 // Token to'g'riligini tekshirish
 router.get('/me', authRequired, (req, res) => {
-  res.json({ ok: true });
+  res.json({ ok: true, devices: sessions.size });
 });
 
-// Logout
+// Faol qurilmalar soni
+router.get('/sessions', authRequired, (req, res) => {
+  res.json({ devices: sessions.size, max: MAX_DEVICES });
+});
+
+// Chiqish (shu qurilma)
 router.post('/logout', authRequired, (req, res) => {
   const token = req.headers.authorization.slice(7);
-  tokens.delete(token);
+  sessions.delete(token);
   res.json({ ok: true });
 });
 
-// Qo'shilgan odamlar ro'yxati (vektorsiz)
-router.get('/hands', authRequired, async (req, res, next) => {
-  try {
-    const auth = await Auth.getSingleton();
-    res.json(auth.hands.map((h) => ({ _id: h._id, label: h.label, createdAt: h.createdAt })));
-  } catch (e) {
-    next(e);
-  }
-});
-
-// Yangi odam (qo'l) qo'shish - maksimal 2 ta
-router.post('/hands', authRequired, async (req, res, next) => {
-  try {
-    const auth = await Auth.getSingleton();
-    if (auth.hands.length >= 2) {
-      return res.status(400).json({ error: 'Maksimal 2 ta odam qo\'shish mumkin' });
-    }
-    const { descriptor, label } = req.body;
-    if (!validDescriptor(descriptor)) {
-      return res.status(400).json({ error: 'Skaner natijasi noto\'g\'ri. Qaytadan skaner qiling' });
-    }
-    auth.hands.push({ label: (label || '').trim() || `Odam ${auth.hands.length + 1}`, descriptor });
-    await auth.save();
-    res.status(201).json(auth.hands.map((h) => ({ _id: h._id, label: h.label, createdAt: h.createdAt })));
-  } catch (e) {
-    next(e);
-  }
-});
-
-// Odamni o'chirish
-router.delete('/hands/:id', authRequired, async (req, res, next) => {
-  try {
-    const auth = await Auth.getSingleton();
-    auth.hands = auth.hands.filter((h) => String(h._id) !== req.params.id);
-    await auth.save();
-    res.json({ ok: true });
-  } catch (e) {
-    next(e);
-  }
+// Barcha qurilmalardan chiqish
+router.post('/logout-all', authRequired, (req, res) => {
+  sessions.clear();
+  res.json({ ok: true });
 });
 
 // Kalit so'zni o'zgartirish

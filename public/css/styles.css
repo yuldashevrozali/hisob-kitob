@@ -211,6 +211,7 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .login-card p.sub { color: var(--muted); margin: 0 0 22px; font-size: 14px; }
 .login-card .field { text-align: left; }
 .login-card input { text-align: center; font-size: 18px; letter-spacing: 0.04em; }
+.login-alert { background: rgba(248, 113, 113, 0.14); border: 1px solid rgba(248, 113, 113, 0.4); color: var(--red); padding: 12px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 18px; }
 
 /* Kamera (skaner) */
 .cam-wrap {

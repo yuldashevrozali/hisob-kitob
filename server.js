@@ -36,10 +36,10 @@ async function start() {
     await mongoose.connect(MONGODB_URI);
     console.log('✅ MongoDB ulandi:', MONGODB_URI);
 
-    // Eski yuz skaneri ma'lumotlarini tozalaymiz (endi qo'l skaneri ishlatiladi)
+    // Eski skaner ma'lumotlarini tozalaymiz (endi faqat kalit so'z bilan kiriladi)
     try {
-      const res = await mongoose.connection.collection('auths').updateMany({}, { $unset: { faces: '' } });
-      if (res.modifiedCount) console.log('🧹 Eski yuz skaneri tozalandi:', res.modifiedCount);
+      const res = await mongoose.connection.collection('auths').updateMany({}, { $unset: { faces: '', hands: '' } });
+      if (res.modifiedCount) console.log('🧹 Eski skaner ma\'lumotlari tozalandi:', res.modifiedCount);
     } catch (_) {}
     app.listen(PORT, () => {
       console.log(`🍑 Server ishlayapti: http://localhost:${PORT}`);

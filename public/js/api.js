@@ -69,8 +69,6 @@ function openModal(html) {
 }
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
-  // Modal ichida kamera ochilgan bo'lsa - o'chiramiz
-  if (typeof handStopCamera === 'function') handStopCamera();
 }
 document.getElementById('modalOverlay').addEventListener('click', (e) => {
   if (e.target.id === 'modalOverlay') closeModal();
