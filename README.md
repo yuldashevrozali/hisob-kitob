@@ -8,8 +8,9 @@ Texnologiyalar: **Node.js + Express + MongoDB (Mongoose)** + vanilla JS frontend
 - **Bosh sahifa** — umumiy balans, so'nggi yozuvlar, ochiq partiyalar.
 - **Kirim / Chiqim** — pul tushumi va xarajat qo'shish. Chiqimda kategoriya tanlanadi.
 - **Shaftoli kuni** — "UNO" tugmasi bilan yashik olinadi (yashik bepul — faqat soni), keyin topshiriladi:
+  - nechta yashik to'lgani (sotilgani) so'raladi, bo'sh qolgani ham saqlanadi;
   - kg kiritishni **umumiy kg** yoki **har 10 yashik uchun kg** tarzida tanlash mumkin;
-  - har 10 yashik uchun tara (standart **20 kg**) ayriladi;
+  - **har bir yashik uchun tara** (kg) topshirishda so'raladi va to'lgan yashiklar soniga ko'paytirilib ayriladi;
   - sof foyda hisoblanadi va **tasdiqlanganda avtomatik kirimga** o'tadi.
 - **Statistika** — faqat o'qish uchun grafiklar va jami ko'rsatkichlar.
 - **Sozlamalar** — chiqim kategoriyalarini qo'shish/o'chirish, tara va valyutani sozlash.
@@ -46,10 +47,11 @@ Brauzerda oching: **http://localhost:3000**
 ## Sof foyda hisobi (formula)
 
 ```
-guruhlar      = yashik_soni / 10
+tolgan_yashik = topshirishda kiritiladi (bo'sh = olingan − to'lgan)
+guruhlar      = tolgan_yashik / 10
 brutto_kg     = (umumiy kg)  yoki  (har_10_uchun_kg × guruhlar)
-tara_kg       = tara_per_10  × guruhlar          (standart 20 kg)
+tara_kg       = tara_per_yashik × tolgan_yashik   (tara topshirishda so'raladi)
 sof_kg        = brutto_kg − tara_kg
-sof_foyda     = sof_kg × 1kg_narxi               (yashik bepul — xarajat yo'q)
+sof_foyda     = sof_kg × 1kg_narxi                (yashik bepul — xarajat yo'q)
 ```
 Tasdiqlangach `sof_foyda` **kirim** yozuvi sifatida saqlanadi.
