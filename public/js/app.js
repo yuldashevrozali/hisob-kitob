@@ -577,7 +577,46 @@ async function renderSozlamalar() {
         </form>
       </div>
     </div>
+
+    <div class="section-head"><h2>💾 Xotira (ma'lumot bazasi)</h2></div>
+    <div class="card">
+      <p class="hint" style="margin-top:0">Ikki alohida xotira mavjud. Har birida o'z kirim-chiqim, kategoriya va shaftoli ma'lumotlari bo'ladi. Xotirani almashtirsangiz — o'sha xotiradagi ma'lumotlar ko'rinadi. <b>Reset</b> faqat joriy (faol) xotirani tozalaydi.</p>
+      <div class="seg" style="max-width:360px">
+        <button type="button" id="slot1" class="${settings.activeSlot === 1 ? 'active' : ''}">1-xotira</button>
+        <button type="button" id="slot2" class="${settings.activeSlot === 2 ? 'active' : ''}">2-xotira</button>
+      </div>
+      <div style="margin-top:16px">
+        <span class="chip" style="margin-right:10px">Faol: <b>${settings.activeSlot}-xotira</b></span>
+        <button class="btn btn-red" id="resetSlotBtn">🗑 ${settings.activeSlot}-xotirani tozalash (reset)</button>
+      </div>
+    </div>
   `;
+
+  async function switchSlot(slot) {
+    if (slot === settings.activeSlot) return;
+    try {
+      const s = await api('/settings/slot', { method: 'PUT', body: { slot } });
+      App.currency = s.currency;
+      App.taraPerCrate = s.taraKgPerCrate;
+      toast(`${slot}-xotiraga o'tildi`, 'ok');
+      renderSozlamalar();
+    } catch (err) {
+      toast(err.message, 'err');
+    }
+  }
+  document.getElementById('slot1').onclick = () => switchSlot(1);
+  document.getElementById('slot2').onclick = () => switchSlot(2);
+
+  document.getElementById('resetSlotBtn').onclick = async () => {
+    if (!confirm(`${settings.activeSlot}-xotiradagi BARCHA ma'lumotlar (kirim-chiqim, kategoriya, shaftoli) o'chiriladi. Davom etasizmi?`)) return;
+    try {
+      const r = await api('/settings/reset', { method: 'POST' });
+      toast(`${r.slot}-xotira tozalandi (${r.deleted.transactions} yozuv, ${r.deleted.batches} partiya)`, 'ok');
+      renderSozlamalar();
+    } catch (err) {
+      toast(err.message, 'err');
+    }
+  };
 
   document.getElementById('catForm').onsubmit = async (e) => {
     e.preventDefault();

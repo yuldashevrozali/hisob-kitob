@@ -38,7 +38,7 @@ function groupBy(txns, keyFn) {
 // Umumiy statistika (faqat o'qish uchun)
 router.get('/', async (req, res, next) => {
   try {
-    const txns = await Transaction.find();
+    const txns = await Transaction.find({ slot: req.slot });
 
     let totalKirim = 0;
     let totalChiqim = 0;
@@ -61,7 +61,7 @@ router.get('/', async (req, res, next) => {
     };
 
     // Shaftoli partiyalari statistikasi + narx tarixi
-    const batches = await PeachBatch.find({ status: 'delivered' }).sort({ 'delivery.deliveredAt': 1 });
+    const batches = await PeachBatch.find({ status: 'delivered', slot: req.slot }).sort({ 'delivery.deliveredAt': 1 });
     let totalCrates = 0;
     let totalDeliveredCrates = 0;
     let totalEmptyCrates = 0;

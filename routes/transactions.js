@@ -6,7 +6,7 @@ const router = express.Router();
 // Yozuvlar ro'yxati (filtr: type=kirim|chiqim)
 router.get('/', async (req, res, next) => {
   try {
-    const filter = {};
+    const filter = { slot: req.slot };
     if (req.query.type) filter.type = req.query.type;
     const items = await Transaction.find(filter).sort({ date: -1, createdAt: -1 }).limit(500);
     res.json(items);
@@ -33,6 +33,7 @@ router.post('/', async (req, res, next) => {
       note: (note || '').trim(),
       date: date ? new Date(date) : new Date(),
       source: 'manual',
+      slot: req.slot,
     });
     res.status(201).json(item);
   } catch (e) {
@@ -43,7 +44,7 @@ router.post('/', async (req, res, next) => {
 // Yozuvni o'chirish
 router.delete('/:id', async (req, res, next) => {
   try {
-    const item = await Transaction.findByIdAndDelete(req.params.id);
+    const item = await Transaction.findOneAndDelete({ _id: req.params.id, slot: req.slot });
     if (!item) return res.status(404).json({ error: 'Topilmadi' });
     res.json({ ok: true });
   } catch (e) {

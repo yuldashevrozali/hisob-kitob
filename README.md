@@ -13,7 +13,12 @@ Texnologiyalar: **Node.js + Express + MongoDB (Mongoose)** + vanilla JS frontend
   - **har bir yashik uchun tara** (kg) topshirishda so'raladi va to'lgan yashiklar soniga ko'paytirilib ayriladi;
   - sof foyda hisoblanadi va **tasdiqlanganda avtomatik kirimga** o'tadi.
 - **Statistika** — faqat o'qish uchun grafiklar va jami ko'rsatkichlar.
-- **Sozlamalar** — chiqim kategoriyalarini qo'shish/o'chirish, tara va valyutani sozlash.
+- **Sozlamalar** — chiqim kategoriyalarini qo'shish/o'chirish, tara va valyutani sozlash, **xotira (2 ta alohida ma'lumot bazasi)** tanlash va reset qilish.
+
+### Xotira (ma'lumot bazasi)
+- Ikki alohida xotira: **1-xotira** va **2-xotira**. Har birida mustaqil kirim-chiqim, kategoriya va shaftoli ma'lumotlari.
+- Hozirgi barcha ma'lumotlar **1-xotira**da. **2-xotira**ga o'tsangiz hammasi bo'sh (0), qaytib o'tsangiz avvalgisi qaytadi.
+- **Reset** faqat joriy (faol) xotirani to'liq tozalaydi — ikkinchisiga tegmaydi.
 
 ## Ishga tushirish
 

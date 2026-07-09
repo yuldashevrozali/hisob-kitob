@@ -62,7 +62,7 @@ async function computeDelivery({ crateCount, deliveredCrates, taraPerCrate, kgMo
 // Barcha partiyalar (ochiq + topshirilgan)
 router.get('/', async (req, res, next) => {
   try {
-    const filter = {};
+    const filter = { slot: req.slot };
     if (req.query.status) filter.status = req.query.status;
     const items = await PeachBatch.find(filter).sort({ createdAt: -1 });
     res.json(items);
@@ -78,7 +78,7 @@ router.post('/', async (req, res, next) => {
     if (!crateCount || crateCount <= 0)
       return res.status(400).json({ error: 'Yashiklar sonini kiriting' });
 
-    const batch = await PeachBatch.create({ crateCount });
+    const batch = await PeachBatch.create({ crateCount, slot: req.slot });
     res.status(201).json(batch);
   } catch (e) {
     next(e);
@@ -88,7 +88,7 @@ router.post('/', async (req, res, next) => {
 // Topshirishni HISOBLASH (saqlamasdan, sof foydani ko'rsatish uchun)
 router.post('/:id/preview', async (req, res, next) => {
   try {
-    const batch = await PeachBatch.findById(req.params.id);
+    const batch = await PeachBatch.findOne({ _id: req.params.id, slot: req.slot });
     if (!batch) return res.status(404).json({ error: 'Partiya topilmadi' });
     if (batch.status === 'delivered')
       return res.status(400).json({ error: 'Bu partiya allaqachon topshirilgan' });
@@ -110,7 +110,7 @@ router.post('/:id/preview', async (req, res, next) => {
 // Topshirishni TASDIQLASH (saqlash + sof foydani kirimga o'tkazish)
 router.post('/:id/deliver', async (req, res, next) => {
   try {
-    const batch = await PeachBatch.findById(req.params.id);
+    const batch = await PeachBatch.findOne({ _id: req.params.id, slot: req.slot });
     if (!batch) return res.status(404).json({ error: 'Partiya topilmadi' });
     if (batch.status === 'delivered')
       return res.status(400).json({ error: 'Bu partiya allaqachon topshirilgan' });
@@ -149,6 +149,7 @@ router.post('/:id/deliver', async (req, res, next) => {
         note: `Shaftoli kuni — ${batch.crateCount} yashik (sof foyda)`,
         source: 'shaftoli',
         batch: batch._id,
+        slot: req.slot,
       });
     } else {
       await Transaction.create({
@@ -158,6 +159,7 @@ router.post('/:id/deliver', async (req, res, next) => {
         note: `Shaftoli kuni — ${batch.crateCount} yashik (zarar)`,
         source: 'shaftoli',
         batch: batch._id,
+        slot: req.slot,
       });
     }
 
@@ -170,7 +172,7 @@ router.post('/:id/deliver', async (req, res, next) => {
 // Partiyani o'chirish (va unga bog'liq yozuvni)
 router.delete('/:id', async (req, res, next) => {
   try {
-    const batch = await PeachBatch.findByIdAndDelete(req.params.id);
+    const batch = await PeachBatch.findOneAndDelete({ _id: req.params.id, slot: req.slot });
     if (!batch) return res.status(404).json({ error: 'Topilmadi' });
     await Transaction.deleteMany({ batch: batch._id });
     res.json({ ok: true });

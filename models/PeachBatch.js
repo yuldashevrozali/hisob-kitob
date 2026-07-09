@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 // Shaftoli kuni: yashik olish va keyin topshirish partiyasi
 const peachBatchSchema = new mongoose.Schema(
   {
+    slot: { type: Number, default: 1, index: true }, // qaysi xotiraga tegishli
+
     // --- Yashik olish bosqichi (yashik bepul, xarajat yo'q) ---
     crateCount: { type: Number, required: true, min: 1 }, // nechta yashik
 

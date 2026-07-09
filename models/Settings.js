@@ -7,6 +7,8 @@ const settingsSchema = new mongoose.Schema(
     // Har bir yashik uchun tara (yashik vazni) - kg. Topshirishda oldindan to'ldiriladi.
     taraKgPerCrate: { type: Number, default: 2 },
     currency: { type: String, default: "so'm" },
+    // Faol xotira (ma'lumot bazasi): 1 yoki 2
+    activeSlot: { type: Number, enum: [1, 2], default: 1 },
   },
   { timestamps: true }
 );

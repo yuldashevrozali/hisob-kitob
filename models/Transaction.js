@@ -5,6 +5,7 @@ const transactionSchema = new mongoose.Schema(
   {
     type: { type: String, enum: ['kirim', 'chiqim'], required: true },
     amount: { type: Number, required: true, min: 0 },
+    slot: { type: Number, default: 1, index: true }, // qaysi xotiraga tegishli
     // Chiqim uchun kategoriya nomi (kirim uchun bo'sh bo'lishi mumkin)
     category: { type: String, default: '' },
     note: { type: String, default: '' },
